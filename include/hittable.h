@@ -1,5 +1,4 @@
-#ifndef HITTABLE_H
-#define HITTABLE_H
+#pragma once
 
 #include "ray.h"
 #include <memory>
@@ -34,7 +33,7 @@ class sphere: public hittable
 public:
     sphere(const glm::vec3&, double, shared_ptr<material>);
     virtual bool hit(const ray&, double, double, hit_record&) const override;
-public:
+protected:
     glm::vec3 center;
     double radius;
     shared_ptr<material> pMat;
@@ -96,5 +95,49 @@ inline bool hittable_list::hit(const ray& r, double t_min, double t_max, hit_rec
     return hitAnything;
 }
 
+class movingsphere : public hittable
+{
+public:
+    movingsphere(const glm::vec3& c0, const glm::vec3& c1, float t0, float t1, double r, shared_ptr<material> mat);
+    virtual bool hit(const ray& r, double tMin, double tMax, hit_record&) const override;
+    glm::vec3 getCenter(float t)const;
+protected:
+    glm::vec3 center0, center1;
+    float time0, time1;
+    double radius;
+    shared_ptr<material> pMat;
+};
 
-#endif
+inline movingsphere::movingsphere(const glm::vec3& c0, const glm::vec3& c1, float t0, float t1, double r, shared_ptr<material> mat)
+	: center0(c0), center1(c1), time0(t0), time1(t1), radius(r), pMat(std::move(mat)) {}
+
+inline glm::vec3 movingsphere::getCenter(float t) const
+{
+    return center0 + ((t - time0) / (time1 - time0)) * (center1 - center0);
+}
+
+
+inline bool movingsphere::hit(const ray& r, double tMin, double tMax, hit_record& rec) const
+{
+    glm::vec3 center = getCenter(r.time());
+    glm::vec3 oc = r.origin() - center;
+    auto a = glm::dot(r.direction(), r.direction());
+    auto halfB = glm::dot(oc, r.direction());
+    auto c = glm::dot(oc, oc) - radius * radius;
+    auto discriminant = halfB * halfB - a * c;
+    if (discriminant < 0) { return false; }
+    auto sqrtd = sqrt(discriminant);
+    auto root = (-halfB - sqrtd) / a;
+
+    if (root < tMin || tMax < root) {
+        root = (-halfB + sqrtd) / a;
+        if (root < tMin || tMax < root)
+            return false;
+    }
+    rec.t = root;
+    rec.p = r.at(root);
+    glm::vec3 outward_normal = (rec.p - center) / static_cast<float>(radius);
+    rec.set_face_normal(r, outward_normal);
+    rec.pMat = pMat;
+    return true;
+}

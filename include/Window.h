@@ -23,9 +23,9 @@ namespace hdgbdn
 
         static void StartRenderLoop(Window&);
 
-        void PushPreRenderOperation(lambda);
-        void PushRenderOperation(lambda);
-        void PushPostRenderOperation(lambda);
+        void SetPreRenderOperation(lambda);
+        void SetRenderOperation(lambda);
+        void SetPostRenderOperation(lambda);
 
         void Close() const;
 

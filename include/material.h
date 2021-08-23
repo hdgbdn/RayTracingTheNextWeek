@@ -28,8 +28,8 @@ inline lambertian::lambertian(const vec3& color): material(), albeo(color) {}
 
 inline bool lambertian::scatter(const ray& rIn, const hit_record& record, vec3& attenuation, ray& scattered) const
 {
-	vec3 scatteredDirection = rtweekend::random_in_hemisphere(record.normal);
-	scattered = ray(record.p, scatteredDirection);
+	vec3 scatteredDirection = rtnextweek::random_in_hemisphere(record.normal);
+	scattered = ray(record.p, scatteredDirection, rIn.time());
 	attenuation = albeo;
 	return true;
 }
@@ -48,8 +48,8 @@ inline metal::metal(const vec3& color) :albeo(color) {}
 
 inline bool metal::scatter(const ray& rIn, const hit_record& record, vec3& attenuation, ray& scattered) const
 {
-	vec3 scatteredDirection = rtweekend::reflect(glm::normalize(rIn.direction()), record.normal);
-	scattered = ray(record.p, scatteredDirection);
+	vec3 scatteredDirection = rtnextweek::reflect(glm::normalize(rIn.direction()), record.normal);
+	scattered = ray(record.p, scatteredDirection, rIn.time());
 	attenuation = albeo;
 	return true;
 }
@@ -67,8 +67,8 @@ inline FuzzyMetal::FuzzyMetal(const vec3& color, double f): metal(color), fuzzy(
 
 inline bool FuzzyMetal::scatter(const ray& rIn, const hit_record& record, vec3& attenuation, ray& scattered) const
 {
-	vec3 scatteredDirection = rtweekend::reflect(glm::normalize(rIn.direction()), record.normal);
-	scattered = ray(record.p, scatteredDirection + static_cast<float>(fuzzy) * rtweekend::random_in_hemisphere(scatteredDirection));
+	vec3 scatteredDirection = rtnextweek::reflect(glm::normalize(rIn.direction()), record.normal);
+	scattered = ray(record.p, scatteredDirection + static_cast<float>(fuzzy) * rtnextweek::random_in_hemisphere(scatteredDirection), rIn.time());
 	attenuation = albeo;
 	return true;
 }
@@ -87,9 +87,9 @@ public:
 		float sin_theta = sqrt(1.0 - cos_theta * cos_theta);
 		bool cannot_refract = refraction_ratio * sin_theta > 1.0;
 		vec3 direction;
-		if (cannot_refract) { direction = rtweekend::reflect(unit_direction, record.normal); }
-		else { direction = rtweekend::refract(unit_direction, record.normal, refraction_ratio); }
-		scattered = ray(record.p, direction);
+		if (cannot_refract) { direction = rtnextweek::reflect(unit_direction, record.normal); }
+		else { direction = rtnextweek::refract(unit_direction, record.normal, refraction_ratio); }
+		scattered = ray(record.p, direction, rIn.time());
 		return true;
 	}
 

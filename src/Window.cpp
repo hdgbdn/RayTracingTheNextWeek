@@ -40,20 +40,20 @@ Window::Window(unsigned w, unsigned h, const string& name)
     });
 }
 
-void Window::PushPreRenderOperation(const Operation& op)
+void Window::SetPreRenderOperation(lambda func)
 {
-    preRenderOpVec.push_back(op);
+    preRender = func;
 }
 
-void Window::PushRenderOperation(const Operation& op)
+void Window::SetRenderOperation(lambda func)
 {
-    renderOpVec.push_back(op);
+    render = func;
 }
 
 
-void Window::PushPostRenderOperation(const Operation& op)
+void Window::SetPostRenderOperation(lambda func)
 {
-    postRenderOpVec.push_back(op);
+    postRender = func;
 }
 
 
@@ -61,15 +61,15 @@ void Window::StartRenderLoop(Window& win)
 {
     if (!win.isInit)
     {
-	    std::cout << "window not init" << endl;
+        std::cout << "window not init" << endl;
         return;
     }
-    win.preRenderOpVec();
+    if(win.preRender) win.preRender();
 	while(!glfwWindowShouldClose(win.pW))
 	{
-        win.renderOpVec();
+        if (win.render) win.render();
 	}
-    win.postRenderOpVec();
+    if (win.postRender) win.postRender();
 }
 
 Window::operator struct GLFWwindow*()
