@@ -5,10 +5,10 @@
 class aabb {
 public:
     aabb() {}
-    aabb(const vec3& a, const vec3& b) { minimum = a; maximum = b; }
+    aabb(const glm::vec3& min, const glm::vec3& max) { minimum = min; maximum = max; }
 
-    vec3 min() const { return minimum; }
-    vec3 max() const { return maximum; }
+    glm::vec3 min() const { return minimum; }
+    glm::vec3 max() const { return maximum; }
 
     bool hit(const ray& r, double t_min, double t_max) const {
         for (int a = 0; a < 3; a++) {
@@ -25,6 +25,6 @@ public:
         return true;
     }
 
-    vec3 minimum;
-    vec3 maximum;
+    glm::vec3 minimum;
+    glm::vec3 maximum;
 };

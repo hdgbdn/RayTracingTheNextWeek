@@ -12,18 +12,36 @@
 #include "hittable.h"
 #include "material.h"
 #include "aabb.h"
+#include "bvh.h"
 using namespace std;
 using namespace hdgbdn;
 
 // configs
 const string APP_NAME = "Ray Tracing The Next Week";
-const int window_width = 400;
-const int window_height = 400;
+const int window_width = 200;
+const int window_height = 200;
 const double infinity = std::numeric_limits<double>::infinity();
-const int samples = 2;
-const int ray_depth = 5;
+const int samples = 50;
+const int ray_depth = 60;
 
 const float aspect_ratio = static_cast<float>(window_width) / window_height;
+
+GLuint createTexture()
+{
+	GLuint texture;
+	glGenTextures(1, &texture);
+	glBindTexture(GL_TEXTURE_2D, texture);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	return texture;
+}
+
+void sendTexture(void* data)
+{
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, window_width, window_height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+}
 
 hittable_list random_scene() {
 	hittable_list world;
@@ -78,22 +96,15 @@ int main()
 {
 	Window win(window_width, window_height, APP_NAME);
 	Shader shader("res/shaders/base.vs", "res/shaders/base.fs");
-	hittable_list world = random_scene();
+	BVHnode world(random_scene(), 0.f, 1.f);
 	FullScreenQuad screenBuffer;
-	glm::vec3 eye(13, 2, 3);
+	glm::vec3 eye(13, 2, 6);
 	glm::vec3 center(0, 0, 0);
 	glm::vec3 up(0.f, 1.f, 0.f);
 	blurcamera cam(eye, center, up, 10, 2, 2 * aspect_ratio, 0.1, 0.f, 1.f);
-	unsigned int texture;
-	glGenTextures(1, &texture);
-	glBindTexture(GL_TEXTURE_2D, texture);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	GLuint texture = createTexture();
 
 	auto* data = new unsigned char[window_height * window_width * 3];
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, window_width, window_height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
 
 	auto setPixelColor = [](int h, int w, unsigned char* p, const glm::vec3& col)
 	{
@@ -106,7 +117,7 @@ int main()
 		p[index++] = b;
 	};
 
-	std::function<glm::vec3(const ray&, const hittable_list&, int)> ray_color = [&](const ray& r, const hittable_list& list, int depth)->glm::vec3
+	std::function<glm::vec3(const ray&, const hittable&, int)> ray_color = [&](const ray& r, const hittable& list, int depth)->glm::vec3
 	{
 		hit_record record;
 		if (depth <= 0) return vec3(0.f);
@@ -147,7 +158,7 @@ int main()
 					setPixelColor(j, i, data, color);
 				}
 			}
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, window_width, window_height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+			sendTexture(data);
 			screenBuffer.Draw(shader, texture);
 			glfwPollEvents();
 			glfwSwapBuffers(win.get());

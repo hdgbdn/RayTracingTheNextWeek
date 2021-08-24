@@ -3,12 +3,15 @@
 #include "ray.h"
 #include <memory>
 #include <vector>
+#include "glm/glm.hpp"
+#include "aabb.h"
 
 using std::shared_ptr;
 using std::make_shared;
 using std::vector;
 
 class material;
+
 
 struct hit_record {
     glm::vec3 p;
@@ -26,13 +29,22 @@ struct hit_record {
 class hittable {
 public:
     virtual bool hit(const ray& r, double t_min, double t_max, hit_record& rec) const = 0;
+    virtual bool boundingBox(float t0, float t1, aabb& outBox) const = 0;
 };
+
+
+aabb surrounding_box(aabb box0, aabb box1);
+inline bool box_compare(const shared_ptr<hittable> a, const shared_ptr<hittable> b, int axis);
+bool box_x_compare(const shared_ptr<hittable> a, const shared_ptr<hittable> b);
+bool box_y_compare(const shared_ptr<hittable> a, const shared_ptr<hittable> b);
+bool box_z_compare(const shared_ptr<hittable> a, const shared_ptr<hittable> b);
 
 class sphere: public hittable
 {
 public:
     sphere(const glm::vec3&, double, shared_ptr<material>);
     virtual bool hit(const ray&, double, double, hit_record&) const override;
+    bool boundingBox(float t0, float t1, aabb& outBox) const override;
 protected:
     glm::vec3 center;
     double radius;
@@ -66,17 +78,33 @@ inline bool sphere::hit(const ray& r, double t_min, double t_max, hit_record& re
     return true;
 }
 
+inline bool sphere::boundingBox(float t0, float t1, aabb& outBox) const
+{
+    outBox = aabb(center - glm::vec3(radius), center + glm::vec3(radius));
+    return true;
+}
+
+
 class hittable_list : public hittable
 {
 public:
     hittable_list() = default;
     hittable_list(shared_ptr<hittable> obj) { add(obj); }
+    vector<shared_ptr<hittable>> getObjects() const;
+    size_t size() const { return objects.size(); }
 	virtual bool hit(const ray& r, double t_min, double t_max, hit_record& rec) const override;
+    bool boundingBox(float t0, float t1, aabb& outBox) const override;
     void add(shared_ptr<hittable> obj) { objects.push_back(obj); }
     void clear() { objects.clear(); }
 private:
     vector<shared_ptr<hittable>> objects;
 };
+
+inline vector<shared_ptr<hittable>> hittable_list::getObjects() const
+{
+    return objects;
+}
+
 
 inline bool hittable_list::hit(const ray& r, double t_min, double t_max, hit_record& rec) const
 {
@@ -95,11 +123,27 @@ inline bool hittable_list::hit(const ray& r, double t_min, double t_max, hit_rec
     return hitAnything;
 }
 
+inline bool hittable_list::boundingBox(float t0, float t1, aabb& outBox) const
+{
+    if (objects.empty()) return false;
+    aabb tempBox(glm::vec3(0), glm::vec3(0));
+    bool firstBox = true;
+    for(const auto& object : objects)
+    {
+        if (!object->boundingBox(t0, t1, tempBox)) return false;
+        outBox = firstBox ? tempBox : surrounding_box(tempBox, outBox);
+        firstBox = false;
+    }
+    return true;
+}
+
+
 class movingsphere : public hittable
 {
 public:
     movingsphere(const glm::vec3& c0, const glm::vec3& c1, float t0, float t1, double r, shared_ptr<material> mat);
     virtual bool hit(const ray& r, double tMin, double tMax, hit_record&) const override;
+    bool boundingBox(float t0, float t1, aabb& outBox) const override;
     glm::vec3 getCenter(float t)const;
 protected:
     glm::vec3 center0, center1;
@@ -115,7 +159,6 @@ inline glm::vec3 movingsphere::getCenter(float t) const
 {
     return center0 + ((t - time0) / (time1 - time0)) * (center1 - center0);
 }
-
 
 inline bool movingsphere::hit(const ray& r, double tMin, double tMax, hit_record& rec) const
 {
@@ -140,4 +183,49 @@ inline bool movingsphere::hit(const ray& r, double tMin, double tMax, hit_record
     rec.set_face_normal(r, outward_normal);
     rec.pMat = pMat;
     return true;
+}
+
+inline bool movingsphere::boundingBox(float t0, float t1, aabb& outBox) const
+{
+    glm::vec3 center = getCenter(t0);
+    aabb box0(center - glm::vec3(radius), center + glm::vec3(radius));
+    center = getCenter(t1);
+    aabb box1(center - glm::vec3(radius), center + glm::vec3(radius));
+    outBox = surrounding_box(box0, box1);
+    return true;
+}
+
+
+aabb surrounding_box(aabb box0, aabb box1) {
+    glm::vec3 small(fmin(box0.min().x, box1.min().x),
+        fmin(box0.min().y, box1.min().y),
+        fmin(box0.min().z, box1.min().z));
+
+    glm::vec3 big(fmax(box0.max().x, box1.max().x),
+        fmax(box0.max().y, box1.max().y),
+        fmax(box0.max().z, box1.max().z));
+
+    return aabb(small, big);
+}
+
+inline bool box_compare(const shared_ptr<hittable> a, const shared_ptr<hittable> b, int axis) {
+    aabb box_a;
+    aabb box_b;
+
+    if (!a->boundingBox(0, 0, box_a) || !b->boundingBox(0, 0, box_b))
+        std::cerr << "No bounding box in bvh_node constructor.\n";
+
+    return box_a.min()[axis] < box_b.min()[axis];
+}
+
+bool box_x_compare(const shared_ptr<hittable> a, const shared_ptr<hittable> b) {
+    return box_compare(a, b, 0);
+}
+
+bool box_y_compare(const shared_ptr<hittable> a, const shared_ptr<hittable> b) {
+    return box_compare(a, b, 1);
+}
+
+bool box_z_compare(const shared_ptr<hittable> a, const shared_ptr<hittable> b) {
+    return box_compare(a, b, 2);
 }

@@ -1,6 +1,9 @@
 #pragma once
 #include <random>
 #include "glm/glm.hpp"
+#include "aabb.h"
+#include "hittable.h"
+#include <iostream>
 
 namespace rtnextweek
 {
@@ -14,6 +17,11 @@ namespace rtnextweek
         static std::uniform_real_distribution<double> distribution(min, max);
         static std::mt19937 generator;
         return distribution(generator);
+    }
+
+    inline int random_int(int min, int max) {
+        // Returns a random integer in [min,max].
+        return static_cast<int>(random_double(min, max + 1));
     }
 
     glm::vec3 random_in_unit_sphere() {
