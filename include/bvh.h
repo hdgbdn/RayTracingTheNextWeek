@@ -39,7 +39,11 @@ inline BVHnode::BVHnode(const std::vector<shared_ptr<hittable>>& src_objects, si
 		: (axis == 1) ? box_y_compare
 		: box_z_compare;
 	size_t span = end - start;
-	if(span == 1)
+	if(span == 0)
+	{
+		left = right = objects[start];
+	}
+	else if(span == 1)
 	{
 		left = right = objects[start];
 	}else if(span == 2)

@@ -3,6 +3,7 @@
 
 #include "rtnextweek.h"
 #include <memory>
+#include "perlin.h"
 
 class texture
 {
@@ -43,6 +44,18 @@ public:
 public:
     shared_ptr<texture> odd;
     shared_ptr<texture> even;
+};
+
+class NoiseTexture :public texture
+{
+public:
+    NoiseTexture(): noise() {}
+    vec3 value(float u, float v, const vec3& p) const override
+    {
+        return vec3(1, 1, 1) * noise.noise(p);
+    }
+private:
+    perlin noise;
 };
 
 #endif // !TEXTURE_H_
