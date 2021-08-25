@@ -11,18 +11,18 @@
 #include "ray.h"
 #include "hittable.h"
 #include "material.h"
-#include "aabb.h"
 #include "bvh.h"
+#include "texture.h"
 using namespace std;
 using namespace hdgbdn;
 
 // configs
 const string APP_NAME = "Ray Tracing The Next Week";
-const int window_width = 200;
-const int window_height = 200;
+const int window_width = 300;
+const int window_height = 300;
 const double infinity = std::numeric_limits<double>::infinity();
-const int samples = 50;
-const int ray_depth = 60;
+const int samples = 2;
+const int ray_depth = 10;
 
 const float aspect_ratio = static_cast<float>(window_width) / window_height;
 
@@ -46,7 +46,8 @@ void sendTexture(void* data)
 hittable_list random_scene() {
 	hittable_list world;
 
-	auto ground_material = make_shared<lambertian>(vec3(0.5, 0.5, 0.5));
+	auto checker_tex = make_shared<checker_texture>(vec3(0.2, 0.3, 0.1), vec3(0.9, 0.9, 0.9));
+	auto ground_material = make_shared<lambertian>(checker_tex);
 	world.add(make_shared<sphere>(vec3(0, -1000, 0), 1000, ground_material));
 
 	for (int a = -11; a < 11; a++) {

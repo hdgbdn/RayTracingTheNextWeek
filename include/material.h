@@ -3,6 +3,7 @@
 
 #include "hittable.h"
 #include "glm/glm.hpp"
+#include "texture.h"
 
 using namespace glm;
 
@@ -18,19 +19,21 @@ class lambertian: public material
 {
 public:
 	lambertian(const vec3&);
+	lambertian(shared_ptr<texture>);
 	virtual bool scatter(const ray& rIn, const hit_record& rec, vec3& attenuation, ray& scattered) const override;
 private:
-	vec3 albeo;
+	shared_ptr<texture> albeo;
 };
 
-inline lambertian::lambertian(const vec3& color): material(), albeo(color) {}
+inline lambertian::lambertian(const vec3& color): material(), albeo(make_shared<solid_color>(color)) {}
 
+inline lambertian::lambertian(shared_ptr<texture> t): material(), albeo(t) {}
 
 inline bool lambertian::scatter(const ray& rIn, const hit_record& record, vec3& attenuation, ray& scattered) const
 {
 	vec3 scatteredDirection = rtnextweek::random_in_hemisphere(record.normal);
 	scattered = ray(record.p, scatteredDirection, rIn.time());
-	attenuation = albeo;
+	attenuation = albeo->value(record.u, record.v, record.p);
 	return true;
 }
 

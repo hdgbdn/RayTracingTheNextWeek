@@ -18,6 +18,8 @@ struct hit_record {
     glm::vec3 normal;
     shared_ptr<material> pMat;
     double t;
+    float u;
+    float v;
     bool front_face;
 
 	void set_face_normal(const ray& r, const glm::vec3& outward_normal) {
@@ -49,6 +51,7 @@ protected:
     glm::vec3 center;
     double radius;
     shared_ptr<material> pMat;
+    static void get_sphere_uv(const glm::vec3& p, float& u, float& v);
 };
 
 inline sphere::sphere(const glm::vec3& c, double r, shared_ptr<material> pm)
@@ -74,6 +77,7 @@ inline bool sphere::hit(const ray& r, double t_min, double t_max, hit_record& re
     rec.p = r.at(root);
     glm::vec3 outward_normal = (rec.p - center) / static_cast<float>(radius);
     rec.set_face_normal(r, outward_normal);
+    get_sphere_uv(outward_normal, rec.u, rec.v);
     rec.pMat = pMat;
     return true;
 }
@@ -82,6 +86,15 @@ inline bool sphere::boundingBox(float t0, float t1, aabb& outBox) const
 {
     outBox = aabb(center - glm::vec3(radius), center + glm::vec3(radius));
     return true;
+}
+
+inline void sphere::get_sphere_uv(const glm::vec3& p, float& u, float& v)
+{
+    float theta = acos(-p.y);
+    float phi = atan2(-p.z, p.x) + glm::pi<float>();
+
+    u = phi / (2.f * glm::pi<float>());
+    v = theta / glm::pi<float>();
 }
 
 
