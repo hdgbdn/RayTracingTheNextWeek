@@ -13,6 +13,10 @@ public:
 	virtual bool scatter(
 		const ray& rIn, const hit_record& record, vec3& attenuation, ray& scattered
 	) const = 0;
+	virtual vec3 emitted(float, float, const vec3&) const
+	{
+		return vec3(0, 0, 0);
+	}
 };
 
 class lambertian: public material
@@ -98,6 +102,23 @@ public:
 
 protected:
 	double ir; // Index of Refraction
+};
+
+class DiffuseLight :public material
+{
+public:
+	DiffuseLight(shared_ptr<texture> t) : emit(t) {}
+	DiffuseLight(const vec3& c) : emit(make_shared<solid_color>(c)) {}
+	virtual bool scatter(const ray& rIn, const hit_record& record, vec3& attenuation, ray& scattered) const override
+	{
+		return false;
+	}
+	virtual vec3 emitted(float u, float v, const vec3& p) const
+	{
+		return emit->value(u, v, p);
+	}
+protected:
+	shared_ptr<texture> emit;
 };
 
 #endif

@@ -19,11 +19,13 @@ using namespace hdgbdn;
 
 // configs
 const string APP_NAME = "Ray Tracing The Next Week";
-const int window_width = 300;
-const int window_height = 300;
+const int window_width = 400;
+const int window_height = 400;
 const double infinity = std::numeric_limits<double>::infinity();
-const int samples = 20;
+const int samples = 50;
 const int ray_depth = 10;
+const float gamma = 2.2f;
+const float exposure = 1.0f;
 
 const float aspect_ratio = static_cast<float>(window_width) / window_height;
 
@@ -116,6 +118,60 @@ hittable_list planet()
 	return world;
 }
 
+hittable_list lightScene()
+{
+	auto lightTexture1 = make_shared<ImageTexture>("res/textures/Gaseous1.png");
+	auto lightTexture2 = make_shared<ImageTexture>("res/textures/Gaseous2.png");
+	auto lightTexture3 = make_shared<ImageTexture>("res/textures/Gaseous3.png");
+	auto lightTexture4 = make_shared<ImageTexture>("res/textures/Gaseous4.png");
+	auto checker_tex = make_shared<checker_texture>(vec3(0.2, 0.3, 0.1), vec3(0.9, 0.9, 0.9));
+	auto lightMat1 = make_shared<DiffuseLight>(lightTexture1);
+	auto lightMat2 = make_shared<DiffuseLight>(lightTexture2);
+	auto lightMat3 = make_shared<DiffuseLight>(lightTexture3);
+	auto lightMat4 = make_shared<DiffuseLight>(lightTexture4);
+	auto groundMat = make_shared<lambertian>(checker_tex);
+	hittable_list world;
+	world.add(make_shared<sphere>(vec3(0, -1000, 0), 1000, groundMat));
+
+	for (int a = -11; a < 11; a++) {
+		for (int b = -11; b < 11; b++) {
+			auto choose_mat = rtnextweek::random_double();
+			vec3 center(a + 0.9 * rtnextweek::random_double(), 0.2, b + 0.9 * rtnextweek::random_double());
+
+			if ((center - vec3(4, 0.2, 0)).length() > 0.9) {
+				shared_ptr<material> sphere_material;
+				if (choose_mat < 0.3)
+				{
+					world.add(make_shared<sphere>(center, 0.2, lightMat3));
+				}
+				else if (choose_mat < 0.4)
+				{
+					world.add(make_shared<sphere>(center, 0.2, lightMat4));
+				}
+				else if (choose_mat < 0.8) {
+					auto albedo = vec3(rtnextweek::random_double(0.5, 1.0), rtnextweek::random_double(0.5, 1.0), rtnextweek::random_double(0.5, 1.0));
+					auto fuzz = rtnextweek::random_double(0, 0.5);
+					sphere_material = make_shared<FuzzyMetal>(albedo, fuzz);
+					world.add(make_shared<sphere>(center, 0.2, sphere_material));
+				}
+				else {
+					sphere_material = make_shared<dielectric>(1.5);
+					world.add(make_shared<sphere>(center, 0.2, sphere_material));
+				}
+			}
+		}
+	}
+
+	auto material1 = make_shared<metal>(vec3(0.7, 0.6, 0.5));
+	world.add(make_shared<sphere>(vec3(0, 1, 0), 1.0, material1));
+	
+	world.add(make_shared<sphere>(vec3(-4, 1, 0), 1.0, material1));
+
+	auto material3 = make_shared<metal>(vec3(0.7, 0.6, 0.5));
+	world.add(make_shared<sphere>(vec3(4, 1, 0), 1.0, material3));
+	return world;
+}
+
 int main()
 {
 	Window win(window_width, window_height, APP_NAME);
@@ -123,8 +179,9 @@ int main()
 	FullScreenQuad screenBuffer;
 	shared_ptr<camera> cam;
 	shared_ptr<BVHnode> world;
+	vec3 background(0.f, 0.f, 0.f);
 	
-	switch (1)
+	switch (3)
 	{
 		glm::vec3 eye;
 		glm::vec3 center;
@@ -134,6 +191,7 @@ int main()
 		eye = vec3(5, 2, 8);
 		center = vec3(0, 0, 0);
 		up = vec3(0.f, 1.f, 0.f);
+		background = vec3(0.70, 0.80, 1.00);
 		world = make_shared<BVHnode>(random_scene(), 0.f, 1.f);
 		cam = make_shared<blurcamera>(eye, center, up, 1, 2, 2 * aspect_ratio, 0.1, 0.f, 1.f);
 		break;
@@ -141,14 +199,23 @@ int main()
 		eye = vec3(5, 2, 8);
 		center = vec3(0, 0, 0);
 		up = vec3(0.f, 1.f, 0.f);
+		background = vec3(0.70, 0.80, 1.00);
 		world = make_shared<BVHnode>(twoSphere(), 0.f, 1.f);
 		cam = make_shared<camera>(eye, center, up, 1, 2, 2 * aspect_ratio, 0.f, 1.f);
 	case 2:
 		eye = vec3(0, 20, 100);
 		center = vec3(0, 0, 0);
 		up = vec3(0.f, 1.f, 0.f);
+		background = vec3(0.70, 0.80, 1.00);
 		world = make_shared<BVHnode>(planet(), 0.f, 1.f);
 		cam = make_shared<camera>(eye, center, up, 10, 2, 2 * aspect_ratio, 0.f, 1.f);
+	case 3:
+		eye = vec3(13, 2, 7);
+		center = vec3(0, 0, 0);
+		up = vec3(0.f, 1.f, 0.f);
+		background = vec3(0.03, 0.02, 0.1);
+		world = make_shared<BVHnode>(lightScene(), 0.f, 1.f);
+		cam = make_shared<camera>(eye, center, up, 8, 2, 2 * aspect_ratio, 0.f, 1.f);
 	}
 	
 	GLuint texture = createTexture();
@@ -158,34 +225,26 @@ int main()
 	auto setPixelColor = [](int h, int w, unsigned char* p, const glm::vec3& col)
 	{
 		int index = 3 * (h * window_width + w);
-		unsigned char r = sqrt(col.r) * 255;
-		unsigned char g = sqrt(col.g) * 255;
-		unsigned char b = sqrt(col.b) * 255;
+		unsigned char r = col.r * 255;
+		unsigned char g = col.g * 255;
+		unsigned char b = col.b * 255;
 		p[index++] = r;
 		p[index++] = g;
 		p[index++] = b;
 	};
 
-	std::function<glm::vec3(const ray&, const hittable&, int)> ray_color = [&](const ray& r, const hittable& list, int depth)->glm::vec3
+	std::function<glm::vec3(const ray&, const vec3& background,const hittable&, int)> ray_color = [&](const ray& r, const vec3& background, const hittable& list, int depth)->glm::vec3
 	{
 		hit_record record;
 		if (depth <= 0) return vec3(0.f);
-		if (list.hit(r, .001, infinity, record))
-		{
-			ray scattered;
-			vec3 attenuation;
-			if (record.pMat->scatter(r, record, attenuation, scattered))
-			{
-				return attenuation * ray_color(scattered, list, depth - 1);
-			}
-			else
-			{
-				return vec3(0);
-			}
-		}
-		glm::vec3 normDir = glm::normalize(r.direction());
-		float t = 0.5 * (normDir.y + 1);
-		return t * glm::vec3(0.5, 0.7, 1.0) + (1 - t) * glm::vec3(1);
+		if (!list.hit(r, .001, infinity, record)) return background;
+		ray scattered;
+		vec3 attenuation;
+		vec3 emitted = record.pMat->emitted(record.u, record.v, record.p);
+
+		if (!record.pMat->scatter(r, record, attenuation, scattered)) return emitted;
+		vec3 color = emitted + attenuation * ray_color(scattered, background, list, depth - 1);
+		return color;
 	};
 
 	win.SetRenderOperation([&]()
@@ -201,9 +260,14 @@ int main()
 					glm::vec3 color(0.f);
 					for (int s = 0; s < samples; ++s)
 					{
-						color += ray_color(cam->getRayFromScreenPos(u + rtnextweek::random_double() / (window_height - 1), v + rtnextweek::random_double() / (window_width - 1)), *world, ray_depth);
+						color += ray_color(cam->getRayFromScreenPos(u + rtnextweek::random_double() / (window_height - 1), v + rtnextweek::random_double() / (window_width - 1)), background,*world, ray_depth);
 					}
 					color /= samples;
+					// vec3 mapped = vec3(1.0) - exp(-color * exposure);
+					vec3 mapped = color;
+					// gamma correction 
+					color = pow(mapped, vec3(1.0 / gamma));
+					
 					setPixelColor(j, i, data, color);
 				}
 			}
