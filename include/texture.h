@@ -49,13 +49,15 @@ public:
 class NoiseTexture :public texture
 {
 public:
-    NoiseTexture(): noise() {}
+    NoiseTexture(float s): noise(), scale(s) {}
+    NoiseTexture() : NoiseTexture(1.f) {}
     vec3 value(float u, float v, const vec3& p) const override
     {
-        return vec3(1, 1, 1) * noise.noise(p);
+        return vec3(1, 1, 1) * 0.5f * (1 + sin(scale * p.z + 10 * noise.turb(p)));
     }
 private:
     perlin noise;
+    float scale;
 };
 
 #endif // !TEXTURE_H_

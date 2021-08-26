@@ -22,7 +22,7 @@ const string APP_NAME = "Ray Tracing The Next Week";
 const int window_width = 300;
 const int window_height = 300;
 const double infinity = std::numeric_limits<double>::infinity();
-const int samples = 2;
+const int samples = 20;
 const int ray_depth = 10;
 
 const float aspect_ratio = static_cast<float>(window_width) / window_height;
@@ -96,11 +96,11 @@ hittable_list random_scene() {
 
 hittable_list twoSphere()
 {
-	auto noiseTexture = make_shared<NoiseTexture>();
+	auto noiseTexture = make_shared<NoiseTexture>(2);
 	auto noiseMat = make_shared<lambertian>(noiseTexture);
 	hittable_list world;
-	world.add(make_shared<sphere>(vec3(0, 0, 0), 2.0, noiseMat));
-	world.add(make_shared<sphere>(vec3(0, -1000, 0), 998.0, noiseMat));
+	world.add(make_shared<sphere>(vec3(0, 0, 0), 5.0, noiseMat));
+	world.add(make_shared<sphere>(vec3(0, -1000, 0), 995.0, noiseMat));
 	return world;
 }
 
@@ -110,10 +110,10 @@ int main()
 	Shader shader("res/shaders/base.vs", "res/shaders/base.fs");
 	BVHnode world(twoSphere(), 0.f, 1.f);
 	FullScreenQuad screenBuffer;
-	glm::vec3 eye(13, 2, 6);
+	glm::vec3 eye(5, 2, 8);
 	glm::vec3 center(0, 0, 0);
 	glm::vec3 up(0.f, 1.f, 0.f);
-	blurcamera cam(eye, center, up, 8, 2, 2 * aspect_ratio, 0.1, 0.f, 1.f);
+	blurcamera cam(eye, center, up, 1, 2, 2 * aspect_ratio, 0.1, 0.f, 1.f);
 	GLuint texture = createTexture();
 
 	auto* data = new unsigned char[window_height * window_width * 3];

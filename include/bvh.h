@@ -45,10 +45,7 @@ inline BVHnode::BVHnode(const std::vector<shared_ptr<hittable>>& src_objects, si
 	}
 	else if(span == 1)
 	{
-		left = right = objects[start];
-	}else if(span == 2)
-	{
-		if(comparator(objects[start], objects[end]))
+		if (comparator(objects[start], objects[end]))
 		{
 			left = objects[start];
 			right = objects[end];
@@ -64,7 +61,7 @@ inline BVHnode::BVHnode(const std::vector<shared_ptr<hittable>>& src_objects, si
 		std::sort(objects.begin() + start, objects.begin() + end, comparator);
 		auto mid = start + span / 2;
 		left = make_shared<BVHnode>(objects, start, mid, time0, time1);
-		right = make_shared<BVHnode>(objects, mid, end, time0, time1);
+		right = make_shared<BVHnode>(objects, mid + 1, end, time0, time1);
 	}
 
 	aabb boxL, boxR;
