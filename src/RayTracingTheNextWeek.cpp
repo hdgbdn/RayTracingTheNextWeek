@@ -104,16 +104,53 @@ hittable_list twoSphere()
 	return world;
 }
 
+hittable_list planet()
+{
+	auto planetTexture = make_shared<ImageTexture>("res/textures/Gaseous4.png");
+	auto planetTexture2 = make_shared<ImageTexture>("res/textures/moonmap4k.jpg");
+	auto planetMat = make_shared<lambertian>(planetTexture);
+	auto planetMat2 = make_shared<lambertian>(planetTexture2);
+	hittable_list world;
+	world.add(make_shared<sphere>(vec3(0, 0, 0), 5.0, planetMat));
+	world.add(make_shared<sphere>(vec3(0, -30, 0), 25, planetMat2));
+	return world;
+}
+
 int main()
 {
 	Window win(window_width, window_height, APP_NAME);
 	Shader shader("res/shaders/base.vs", "res/shaders/base.fs");
-	BVHnode world(twoSphere(), 0.f, 1.f);
 	FullScreenQuad screenBuffer;
-	glm::vec3 eye(5, 2, 8);
-	glm::vec3 center(0, 0, 0);
-	glm::vec3 up(0.f, 1.f, 0.f);
-	blurcamera cam(eye, center, up, 1, 2, 2 * aspect_ratio, 0.1, 0.f, 1.f);
+	shared_ptr<camera> cam;
+	shared_ptr<BVHnode> world;
+	
+	switch (1)
+	{
+		glm::vec3 eye;
+		glm::vec3 center;
+		glm::vec3 up;
+	default:
+	case 0:
+		eye = vec3(5, 2, 8);
+		center = vec3(0, 0, 0);
+		up = vec3(0.f, 1.f, 0.f);
+		world = make_shared<BVHnode>(random_scene(), 0.f, 1.f);
+		cam = make_shared<blurcamera>(eye, center, up, 1, 2, 2 * aspect_ratio, 0.1, 0.f, 1.f);
+		break;
+	case 1:
+		eye = vec3(5, 2, 8);
+		center = vec3(0, 0, 0);
+		up = vec3(0.f, 1.f, 0.f);
+		world = make_shared<BVHnode>(twoSphere(), 0.f, 1.f);
+		cam = make_shared<camera>(eye, center, up, 1, 2, 2 * aspect_ratio, 0.f, 1.f);
+	case 2:
+		eye = vec3(0, 20, 100);
+		center = vec3(0, 0, 0);
+		up = vec3(0.f, 1.f, 0.f);
+		world = make_shared<BVHnode>(planet(), 0.f, 1.f);
+		cam = make_shared<camera>(eye, center, up, 10, 2, 2 * aspect_ratio, 0.f, 1.f);
+	}
+	
 	GLuint texture = createTexture();
 
 	auto* data = new unsigned char[window_height * window_width * 3];
@@ -164,7 +201,7 @@ int main()
 					glm::vec3 color(0.f);
 					for (int s = 0; s < samples; ++s)
 					{
-						color += ray_color(cam.getRayFromScreenPos(u + rtnextweek::random_double() / (window_height - 1), v + rtnextweek::random_double() / (window_width - 1)), world, ray_depth);
+						color += ray_color(cam->getRayFromScreenPos(u + rtnextweek::random_double() / (window_height - 1), v + rtnextweek::random_double() / (window_width - 1)), *world, ray_depth);
 					}
 					color /= samples;
 					setPixelColor(j, i, data, color);
