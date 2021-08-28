@@ -10,7 +10,7 @@
 class BVHnode :public hittable
 {
 public:
-	BVHnode(const hittable_list& list, float t0, float t1): BVHnode(list.getObjects(), 0, list.size() - 1, t0, t1) {}
+	BVHnode(const hittable_list& list, float t0, float t1): BVHnode(list.getObjects(), 0, list.size(), t0, t1) {}
 	BVHnode(
 		const std::vector<shared_ptr<hittable>>& src_objects,
 		size_t start, size_t end, double time0, double time1);
@@ -39,29 +39,28 @@ inline BVHnode::BVHnode(const std::vector<shared_ptr<hittable>>& src_objects, si
 		: (axis == 1) ? box_y_compare
 		: box_z_compare;
 	size_t span = end - start;
-	if(span == 0)
-	{
+	if (span == 1) {
 		left = right = objects[start];
 	}
-	else if(span == 1)
+	else if(span == 2)
 	{
-		if (comparator(objects[start], objects[end]))
+		if (comparator(objects[start], objects[start + 1]))
 		{
 			left = objects[start];
-			right = objects[end];
+			right = objects[start + 1];
 		}
 		else
 		{
 			right = objects[start];
-			left = objects[end];
+			left = objects[start + 1];
 		}
 	}
 	else
 	{
 		std::sort(objects.begin() + start, objects.begin() + end, comparator);
-		auto mid = start + span / 2;
+		size_t mid = start + span / 2;
 		left = make_shared<BVHnode>(objects, start, mid, time0, time1);
-		right = make_shared<BVHnode>(objects, mid + 1, end, time0, time1);
+		right = make_shared<BVHnode>(objects, mid, end, time0, time1);
 	}
 
 	aabb boxL, boxR;

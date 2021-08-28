@@ -97,7 +97,6 @@ inline void sphere::get_sphere_uv(const glm::vec3& p, float& u, float& v)
     v = theta / glm::pi<float>();
 }
 
-
 class hittable_list : public hittable
 {
 public:
@@ -117,7 +116,6 @@ inline vector<shared_ptr<hittable>> hittable_list::getObjects() const
 {
     return objects;
 }
-
 
 inline bool hittable_list::hit(const ray& r, double t_min, double t_max, hit_record& rec) const
 {
@@ -149,7 +147,6 @@ inline bool hittable_list::boundingBox(float t0, float t1, aabb& outBox) const
     }
     return true;
 }
-
 
 class movingsphere : public hittable
 {
@@ -208,7 +205,118 @@ inline bool movingsphere::boundingBox(float t0, float t1, aabb& outBox) const
     return true;
 }
 
+class XYRect: public hittable
+{
+public:
+    XYRect(float _x0, float _x1, float _y0, float _y1, float _z, shared_ptr<material> _mat);
+    bool boundingBox(float t0, float t1, aabb& outBox) const override;
+    bool hit(const ray& r, double t_min, double t_max, hit_record& rec) const override;
+protected:
+    float x0, x1, y0, y1, k;
+    shared_ptr<material> pMat;
+};
 
+inline XYRect::XYRect(float _x0, float _x1, float _y0, float _y1, float _z, shared_ptr<material> _mat):
+		x0(_x0), x1(_x1), y0(_y0), y1(_y1), k(_z), pMat(std::move(_mat)) {}
+
+inline bool XYRect::boundingBox(float t0, float t1, aabb& outBox) const
+{
+    outBox = aabb(glm::vec3(x0, y0, k - 0.001f), glm::vec3(x1, y1, k + 0.001f));
+    return true;
+}
+
+inline bool XYRect::hit(const ray& r, double t_min, double t_max, hit_record& rec) const
+{
+    float t = (k - r.origin().z) / r.direction().z;
+    if (t < t_min || t > t_max) { return false; }
+    float x = r.origin().x + t * r.direction().x;
+    float y = r.origin().y + t * r.direction().y;
+    if (x < x0 || x > x1 || y < y0 || y > y1) { return false; }
+    auto outward_normal = glm::vec3(0, 0, 1);
+    rec.set_face_normal(r, outward_normal);
+    rec.pMat = pMat;
+    rec.t = t;
+    rec.u = (x - x0) / (x1 - x0);
+    rec.v = (y - y0) / (y1 - y0);
+    rec.p = r.at(t);
+}
+
+class YZRect :public hittable
+{
+public:
+    YZRect(float _y0, float _y1, float _z0, float _z1, float _x, shared_ptr<material> _mat);
+    bool boundingBox(float t0, float t1, aabb& outBox) const override;
+    bool hit(const ray& r, double t_min, double t_max, hit_record& rec) const override;
+protected:
+    float y0, y1, z0, z1, k;
+    shared_ptr<material> pMat;
+};
+
+inline YZRect::YZRect(float _y0, float _y1, float _z0, float _z1, float _x, shared_ptr<material> _mat) :
+	y0(_y0), y1(_y1), z0(_z0), z1(_z1), k(_x), pMat(std::move(_mat)) {}
+
+inline bool YZRect::boundingBox(float t0, float t1, aabb& outBox) const
+{
+    outBox = aabb(glm::vec3(k - 0.001f, y0, z0), glm::vec3(k + 0.001f, y1, z1));
+    return true;
+}
+
+inline bool YZRect::hit(const ray& r, double t_min, double t_max, hit_record& rec) const
+{
+    auto t = (k - r.origin().x) / r.direction().x;
+    if (t < t_min || t > t_max)
+        return false;
+    auto y = r.origin().y + t * r.direction().y;
+    auto z = r.origin().z + t * r.direction().z;
+    if (y < y0 || y > y1 || z < z0 || z > z1)
+        return false;
+    rec.u = (y - y0) / (y1 - y0);
+    rec.v = (z - z0) / (z1 - z0);
+    rec.t = t;
+    auto outward_normal = glm::vec3(1, 0, 0);
+    rec.set_face_normal(r, outward_normal);
+    rec.pMat = pMat;
+    rec.p = r.at(t);
+    return true;
+}
+
+class XZRect : public hittable
+{
+public:
+    XZRect(float _x0, float _x1, float _z0, float _z1, float _y, shared_ptr<material> _mat);
+    bool boundingBox(float t0, float t1, aabb& outBox) const override;
+    bool hit(const ray& r, double t_min, double t_max, hit_record& rec) const override;
+protected:
+    float x0, x1, z0, z1, k;
+    shared_ptr<material> pMat;
+};
+
+inline XZRect::XZRect(float _x0, float _x1, float _z0, float _z1, float _y, shared_ptr<material> _mat) :
+    x0(_x0), x1(_x1), z0(_z0), z1(_z1), k(_y), pMat(std::move(_mat)) {}
+
+inline bool XZRect::boundingBox(float t0, float t1, aabb& outBox) const
+{
+    outBox = aabb(glm::vec3(x0, k - 0.001f, z0), glm::vec3(x1, k + 0.001f, z1));
+    return true;
+}
+
+inline bool XZRect::hit(const ray& r, double t_min, double t_max, hit_record& rec) const
+{
+    float t = (k - r.origin().y) / r.direction().y;
+    if (t < t_min || t > t_max) { return false; }
+    float x = r.origin().x + t * r.direction().x;
+    float z = r.origin().z + t * r.direction().z;
+    if (x < x0 || x > x1 || z < z0 || z > z1) { return false; }
+    auto outward_normal = glm::vec3(0, 1, 0);
+    rec.set_face_normal(r, outward_normal);
+    rec.pMat = pMat;
+    rec.t = t;
+    rec.u = (x - x0) / (x1 - x0);
+    rec.v = (z - z0) / (z1 - z0);
+    rec.p = r.at(t);
+}
+
+// helper functions
 aabb surrounding_box(aabb box0, aabb box1) {
     glm::vec3 small(fmin(box0.min().x, box1.min().x),
         fmin(box0.min().y, box1.min().y),

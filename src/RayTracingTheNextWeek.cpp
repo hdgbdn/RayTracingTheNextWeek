@@ -13,7 +13,6 @@
 #include "material.h"
 #include "bvh.h"
 #include "texture.h"
-#include "perlin.h"
 using namespace std;
 using namespace hdgbdn;
 
@@ -22,10 +21,10 @@ const string APP_NAME = "Ray Tracing The Next Week";
 const int window_width = 400;
 const int window_height = 400;
 const double infinity = std::numeric_limits<double>::infinity();
-const int samples = 50;
-const int ray_depth = 10;
-const float gamma = 2.2f;
-const float exposure = 1.0f;
+const int samples = 3;
+const int ray_depth = 50;
+const float gamma = 1.f;
+const float exposure = 3.0f;
 
 const float aspect_ratio = static_cast<float>(window_width) / window_height;
 
@@ -118,6 +117,25 @@ hittable_list planet()
 	return world;
 }
 
+hittable_list CornellBox()
+{
+	hittable_list objects;
+
+	auto red = make_shared<lambertian>(vec3(.65, .05, .05));
+	auto white = make_shared<lambertian>(vec3(.73, .73, .73));
+	auto green = make_shared<lambertian>(vec3(.12, .45, .15));
+	auto light = make_shared<DiffuseLight>(vec3(15, 15, 15));
+
+	objects.add(make_shared<YZRect>(0, 555, 0, 555, 555, green));
+	objects.add(make_shared<YZRect>(0, 555, 0, 555, 0, red));
+	objects.add(make_shared<XZRect>(213, 343, 227, 332, 554, light));
+	objects.add(make_shared<XZRect>(0, 555, 0, 555, 0, white));
+	objects.add(make_shared<XZRect>(0, 555, 0, 555, 555, white));
+	objects.add(make_shared<XYRect>(0, 555, 0, 555, 555, white));
+
+	return objects;
+}
+
 hittable_list lightScene()
 {
 	auto lightTexture1 = make_shared<ImageTexture>("res/textures/Gaseous1.png");
@@ -129,6 +147,7 @@ hittable_list lightScene()
 	auto lightMat2 = make_shared<DiffuseLight>(lightTexture2);
 	auto lightMat3 = make_shared<DiffuseLight>(lightTexture3);
 	auto lightMat4 = make_shared<DiffuseLight>(lightTexture4);
+	auto difflight = make_shared<DiffuseLight>(vec3(4, 4, 4));
 	auto groundMat = make_shared<lambertian>(checker_tex);
 	hittable_list world;
 	world.add(make_shared<sphere>(vec3(0, -1000, 0), 1000, groundMat));
@@ -142,11 +161,11 @@ hittable_list lightScene()
 				shared_ptr<material> sphere_material;
 				if (choose_mat < 0.3)
 				{
-					world.add(make_shared<sphere>(center, 0.2, lightMat3));
+					world.add(make_shared<sphere>(center, 0.2, difflight));
 				}
 				else if (choose_mat < 0.4)
 				{
-					world.add(make_shared<sphere>(center, 0.2, lightMat4));
+					world.add(make_shared<sphere>(center, 0.2, difflight));
 				}
 				else if (choose_mat < 0.8) {
 					auto albedo = vec3(rtnextweek::random_double(0.5, 1.0), rtnextweek::random_double(0.5, 1.0), rtnextweek::random_double(0.5, 1.0));
@@ -181,7 +200,7 @@ int main()
 	shared_ptr<BVHnode> world;
 	vec3 background(0.f, 0.f, 0.f);
 	
-	switch (3)
+	switch (4)
 	{
 		glm::vec3 eye;
 		glm::vec3 center;
@@ -216,6 +235,13 @@ int main()
 		background = vec3(0.03, 0.02, 0.1);
 		world = make_shared<BVHnode>(lightScene(), 0.f, 1.f);
 		cam = make_shared<camera>(eye, center, up, 8, 2, 2 * aspect_ratio, 0.f, 1.f);
+	case 4:
+		eye = vec3(278, 278, -800);
+		center = vec3(278, 278, 0);
+		up = vec3(0.f, 1.f, 0.f);
+		background = vec3(0, 0, 0);
+		world = make_shared<BVHnode>(CornellBox(), 0.f, 1.f);
+		cam = make_shared<camera>(eye, center, up, 799, 555, 555 * aspect_ratio, 0.f, 1.f);
 	}
 	
 	GLuint texture = createTexture();
@@ -263,8 +289,8 @@ int main()
 						color += ray_color(cam->getRayFromScreenPos(u + rtnextweek::random_double() / (window_height - 1), v + rtnextweek::random_double() / (window_width - 1)), background,*world, ray_depth);
 					}
 					color /= samples;
-					// vec3 mapped = vec3(1.0) - exp(-color * exposure);
-					vec3 mapped = color;
+					vec3 mapped = vec3(1.0) - exp(-color * exposure);
+					//vec3 mapped = color;
 					// gamma correction 
 					color = pow(mapped, vec3(1.0 / gamma));
 					
