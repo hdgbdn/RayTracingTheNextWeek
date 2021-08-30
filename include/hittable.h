@@ -404,7 +404,7 @@ inline RotateY::RotateY(shared_ptr<hittable> p, float angle): ptr(p)
     hasbox = ptr->boundingBox(0, 1, bbox);
 
     float fMax = std::numeric_limits<float>::max();
-    float fMin = std::numeric_limits<float>::min();
+    float fMin = -fMax;
     glm::vec3 min(fMax, fMax, fMax);
     glm::vec3 max(fMin, fMin, fMin);
 
@@ -470,7 +470,7 @@ inline bool RotateY::hit(const ray& r, double t_min, double t_max, hit_record& r
 }
 
 
-// helper functions
+//------------------------ helper functions
 aabb surrounding_box(aabb box0, aabb box1) {
     glm::vec3 small(fmin(box0.min().x, box1.min().x),
         fmin(box0.min().y, box1.min().y),

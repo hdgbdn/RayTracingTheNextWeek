@@ -13,6 +13,7 @@
 #include "material.h"
 #include "bvh.h"
 #include "texture.h"
+#include "ConstantMedium.h"
 using namespace std;
 using namespace hdgbdn;
 
@@ -21,7 +22,7 @@ const string APP_NAME = "Ray Tracing The Next Week";
 const int window_width = 300;
 const int window_height = 300;
 const double infinity = std::numeric_limits<double>::infinity();
-const int samples = 40;
+const int samples = 50;
 const int ray_depth = 50;
 const float gamma = 1.f;
 const float exposure = 3.0f;
@@ -137,10 +138,12 @@ hittable_list CornellBox()
 	shared_ptr<hittable> box1 = make_shared<Box>(vec3(0, 0, 0), vec3(165, 330, 165), white);
 	box1 = make_shared<RotateY>(box1, 15);
 	box1 = make_shared<Translate>(box1, vec3(265, 0, 295));
+	box1 = make_shared<ConstantMedium>(box1, .01f, vec3(1.f, 1.f, 1.f));
 	objects.add(box1);
 	shared_ptr<hittable> box2 = make_shared<Box>(vec3(0, 0, 0), vec3(165, 165, 165), white);
 	box2 = make_shared<RotateY>(box2, -18);
 	box2 = make_shared<Translate>(box2, vec3(130, 0, 65));
+	box2 = make_shared<ConstantMedium>(box2, .01f, vec3(0.f, 0.f, 0.f));
 	objects.add(box2);
 
 	return objects;
@@ -232,6 +235,7 @@ int main()
 		background = vec3(0.70, 0.80, 1.00);
 		world = make_shared<BVHnode>(twoSphere(), 0.f, 1.f);
 		cam = make_shared<camera>(eye, center, up, 1, 2, 2 * aspect_ratio, 0.f, 1.f);
+		break;
 	case 2:
 		eye = vec3(0, 20, 100);
 		center = vec3(0, 0, 0);
@@ -239,6 +243,7 @@ int main()
 		background = vec3(0.70, 0.80, 1.00);
 		world = make_shared<BVHnode>(planet(), 0.f, 1.f);
 		cam = make_shared<camera>(eye, center, up, 10, 2, 2 * aspect_ratio, 0.f, 1.f);
+		break;
 	case 3:
 		eye = vec3(13, 2, 7);
 		center = vec3(0, 0, 0);
@@ -246,6 +251,7 @@ int main()
 		background = vec3(0.03, 0.02, 0.1);
 		world = make_shared<BVHnode>(lightScene(), 0.f, 1.f);
 		cam = make_shared<camera>(eye, center, up, 8, 2, 2 * aspect_ratio, 0.f, 1.f);
+		break;
 	case 4:
 		eye = vec3(278, 278, -800);
 		center = vec3(278, 278, 0);
@@ -253,6 +259,7 @@ int main()
 		background = vec3(0, 0, 0);
 		world = make_shared<BVHnode>(CornellBox(), 0.f, 1.f);
 		cam = make_shared<camera>(eye, center, up, 799, 555, 555 * aspect_ratio, 0.f, 1.f);
+		break;
 	}
 	
 	GLuint texture = createTexture();
@@ -308,15 +315,15 @@ int main()
 						color = pow(mapped, vec3(1.0 / gamma));
 
 						setPixelColor(j, i, data, color);
+
+						glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, window_width, window_height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+						screenBuffer.Draw(shader, texture);
+						glfwSwapBuffers(win.get());
+						glfwPollEvents();
 					}
 				}
 				needUpdate = false;
 			}
-			
-			sendTexture(data);
-			screenBuffer.Draw(shader, texture);
-			glfwPollEvents();
-			glfwSwapBuffers(win.get());
 	});
 	Window::StartRenderLoop(win);
 	return 0;

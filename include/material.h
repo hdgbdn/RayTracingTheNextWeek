@@ -121,4 +121,21 @@ protected:
 	shared_ptr<texture> emit;
 };
 
+class Isotropic : public material
+{
+public:
+	Isotropic(const vec3& c) : albedo(make_shared<solid_color>(c)) {}
+	Isotropic(shared_ptr<texture> a) : albedo(a) {}
+	bool scatter(const ray& rIn, const hit_record& record, vec3& attenuation, ray& scattered) const override;
+protected:
+	shared_ptr<texture> albedo;
+};
+
+inline bool Isotropic::scatter(const ray& rIn, const hit_record& record, vec3& attenuation, ray& scattered) const
+{
+	scattered = ray(record.p ,rtnextweek::random_in_unit_sphere(), rIn.time());
+	attenuation = albedo->value(record.u, record.v, record.p);
+	return true;
+}
+
 #endif
