@@ -18,10 +18,10 @@ using namespace hdgbdn;
 
 // configs
 const string APP_NAME = "Ray Tracing The Next Week";
-const int window_width = 400;
-const int window_height = 400;
+const int window_width = 300;
+const int window_height = 300;
 const double infinity = std::numeric_limits<double>::infinity();
-const int samples = 3;
+const int samples = 4;
 const int ray_depth = 50;
 const float gamma = 1.f;
 const float exposure = 3.0f;
@@ -133,6 +133,11 @@ hittable_list CornellBox()
 	objects.add(make_shared<XZRect>(0, 555, 0, 555, 555, white));
 	objects.add(make_shared<XYRect>(0, 555, 0, 555, 555, white));
 
+
+	auto material1 = make_shared<dielectric>(1.5);
+	objects.add(make_shared<Box>(vec3(130, 0, 65), vec3(295, 165, 230), material1));
+	objects.add(make_shared<Box>(vec3(265, 0, 295), vec3(430, 330, 460), white));
+
 	return objects;
 }
 
@@ -196,6 +201,7 @@ int main()
 	Window win(window_width, window_height, APP_NAME);
 	Shader shader("res/shaders/base.vs", "res/shaders/base.fs");
 	FullScreenQuad screenBuffer;
+	bool needUpdate = true;
 	shared_ptr<camera> cam;
 	shared_ptr<BVHnode> world;
 	vec3 background(0.f, 0.f, 0.f);
@@ -279,24 +285,29 @@ int main()
 			glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 			glClear(GL_COLOR_BUFFER_BIT);
 
-			for (int j = window_height - 1; j >= 0; --j) {
-				for (int i = 0; i < window_width; ++i) {
-					float u = static_cast<float>(j) / window_height;
-					float v = static_cast<float>(i) / window_width;
-					glm::vec3 color(0.f);
-					for (int s = 0; s < samples; ++s)
-					{
-						color += ray_color(cam->getRayFromScreenPos(u + rtnextweek::random_double() / (window_height - 1), v + rtnextweek::random_double() / (window_width - 1)), background,*world, ray_depth);
+			if(needUpdate)
+			{
+				for (int j = window_height - 1; j >= 0; --j) {
+					for (int i = 0; i < window_width; ++i) {
+						float u = static_cast<float>(j) / window_height;
+						float v = static_cast<float>(i) / window_width;
+						glm::vec3 color(0.f);
+						for (int s = 0; s < samples; ++s)
+						{
+							color += ray_color(cam->getRayFromScreenPos(u + rtnextweek::random_double() / (window_height - 1), v + rtnextweek::random_double() / (window_width - 1)), background, *world, ray_depth);
+						}
+						color /= samples;
+						vec3 mapped = vec3(1.0) - exp(-color * exposure);
+						//vec3 mapped = color;
+						// gamma correction 
+						color = pow(mapped, vec3(1.0 / gamma));
+
+						setPixelColor(j, i, data, color);
 					}
-					color /= samples;
-					vec3 mapped = vec3(1.0) - exp(-color * exposure);
-					//vec3 mapped = color;
-					// gamma correction 
-					color = pow(mapped, vec3(1.0 / gamma));
-					
-					setPixelColor(j, i, data, color);
 				}
+				needUpdate = false;
 			}
+			
 			sendTexture(data);
 			screenBuffer.Draw(shader, texture);
 			glfwPollEvents();

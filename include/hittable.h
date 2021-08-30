@@ -3,6 +3,7 @@
 #include "ray.h"
 #include <memory>
 #include <vector>
+#include "glm/fwd.hpp"
 #include "glm/glm.hpp"
 #include "aabb.h"
 
@@ -315,6 +316,44 @@ inline bool XZRect::hit(const ray& r, double t_min, double t_max, hit_record& re
     rec.v = (z - z0) / (z1 - z0);
     rec.p = r.at(t);
 }
+
+class Box : public hittable
+{
+public:
+    Box() = default;
+    Box(const glm::vec3& p0, const glm::vec3& p1, shared_ptr<material> pMat, 
+        const glm::mat4& t = glm::mat4(1.f), const glm::mat4& s = glm::mat4(1.f), const glm::mat4& r = glm::mat4(1.f));
+    bool hit(const ray& r, double t_min, double t_max, hit_record& rec) const override;
+    bool boundingBox(float t0, float t1, aabb& outBox) const override;
+private:
+    glm::vec3 boxMin;
+    glm::vec3 boxMax;
+    hittable_list sides;
+};
+
+inline Box::Box(const glm::vec3& p0, const glm::vec3& p1, shared_ptr<material> pMat, 
+    const glm::mat4& t, const glm::mat4& s, const glm::mat4& r): boxMin(p0), boxMax(p1)
+{
+    sides.add(make_shared<XYRect>(p0.x, p1.x, p0.x, p1.y, p0.z, pMat));
+    sides.add(make_shared<XYRect>(p0.x, p1.x, p0.x, p1.y, p1.z, pMat));
+    sides.add(make_shared<XZRect>(p0.x, p1.x, p0.z, p1.z, p0.y, pMat));
+    sides.add(make_shared<XZRect>(p0.x, p1.x, p0.z, p1.z, p1.y, pMat));
+    sides.add(make_shared<YZRect>(p0.y, p1.y, p0.z, p1.z, p0.x, pMat));
+    sides.add(make_shared<YZRect>(p0.y, p1.y, p0.z, p1.z, p1.x, pMat));
+}
+
+inline bool Box::boundingBox(float t0, float t1, aabb& outBox) const
+{
+    outBox = aabb(boxMin, boxMax);
+    return true;
+}
+
+inline bool Box::hit(const ray& r, double t_min, double t_max, hit_record& rec) const
+{
+    return sides.hit(r, t_min, t_max, rec);
+}
+
+
 
 // helper functions
 aabb surrounding_box(aabb box0, aabb box1) {
