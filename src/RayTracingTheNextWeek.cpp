@@ -21,7 +21,7 @@ const string APP_NAME = "Ray Tracing The Next Week";
 const int window_width = 300;
 const int window_height = 300;
 const double infinity = std::numeric_limits<double>::infinity();
-const int samples = 4;
+const int samples = 40;
 const int ray_depth = 50;
 const float gamma = 1.f;
 const float exposure = 3.0f;
@@ -134,9 +134,14 @@ hittable_list CornellBox()
 	objects.add(make_shared<XYRect>(0, 555, 0, 555, 555, white));
 
 
-	auto material1 = make_shared<dielectric>(1.5);
-	objects.add(make_shared<Box>(vec3(130, 0, 65), vec3(295, 165, 230), material1));
-	objects.add(make_shared<Box>(vec3(265, 0, 295), vec3(430, 330, 460), white));
+	shared_ptr<hittable> box1 = make_shared<Box>(vec3(0, 0, 0), vec3(165, 330, 165), white);
+	box1 = make_shared<RotateY>(box1, 15);
+	box1 = make_shared<Translate>(box1, vec3(265, 0, 295));
+	objects.add(box1);
+	shared_ptr<hittable> box2 = make_shared<Box>(vec3(0, 0, 0), vec3(165, 165, 165), white);
+	box2 = make_shared<RotateY>(box2, -18);
+	box2 = make_shared<Translate>(box2, vec3(130, 0, 65));
+	objects.add(box2);
 
 	return objects;
 }

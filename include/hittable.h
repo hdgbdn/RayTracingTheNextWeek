@@ -353,6 +353,121 @@ inline bool Box::hit(const ray& r, double t_min, double t_max, hit_record& rec) 
     return sides.hit(r, t_min, t_max, rec);
 }
 
+class Translate : public hittable
+{
+public:
+    Translate(shared_ptr<hittable> p, const glm::vec3& displacement) : ptr(p), offset(displacement) {}
+	bool hit(const ray& r, double t_min, double t_max, hit_record& rec) const override;
+    bool boundingBox(float t0, float t1, aabb& outBox) const override;
+private:
+    shared_ptr<hittable> ptr;
+    glm::vec3 offset;
+};
+
+inline bool Translate::hit(const ray& r, double t_min, double t_max, hit_record& rec) const
+{
+    ray movedR = ray(r.origin() - offset, r.direction(), r.time());
+    if (!ptr->hit(movedR, t_min, t_max, rec)) return false;
+
+    rec.p += offset;
+    rec.set_face_normal(movedR, rec.normal);
+    return true;
+}
+
+inline bool Translate::boundingBox(float t0, float t1, aabb& outBox) const
+{
+    if (!ptr->boundingBox(t0, t1, outBox)) return false;
+    outBox = aabb(outBox.min() + offset, outBox.max() + offset);
+    return true;
+}
+
+class RotateY : public hittable
+{
+public:
+    RotateY(shared_ptr<hittable> p, float angle);
+
+	bool hit(const ray& r, double t_min, double t_max, hit_record& rec) const override;
+	bool boundingBox(float t0, float t1, aabb& outBox) const override;
+private:
+    shared_ptr<hittable> ptr;
+    float sinTheta;
+    float cosTheta;
+    bool hasbox;
+    aabb bbox;
+};
+
+inline RotateY::RotateY(shared_ptr<hittable> p, float angle): ptr(p)
+{
+    auto radians = glm::degrees(angle);
+    sinTheta = glm::sin(radians);
+    cosTheta = glm::cos(radians);
+    hasbox = ptr->boundingBox(0, 1, bbox);
+
+    float fMax = std::numeric_limits<float>::max();
+    float fMin = std::numeric_limits<float>::min();
+    glm::vec3 min(fMax, fMax, fMax);
+    glm::vec3 max(fMin, fMin, fMin);
+
+    for (int i = 0; i < 2; i++) {
+        for (int j = 0; j < 2; j++) {
+            for (int k = 0; k < 2; k++) {
+                auto x = i * bbox.max().x + (1 - i) * bbox.min().x;
+                auto y = j * bbox.max().y + (1 - j) * bbox.min().y;
+                auto z = k * bbox.max().z + (1 - k) * bbox.min().z;
+
+                auto newx = cosTheta * x + sinTheta * z;
+                auto newz = -sinTheta * x + cosTheta * z;
+
+                glm::vec3 tester(newx, y, newz);
+
+                for (int c = 0; c < 3; c++) {
+                    min[c] = fmin(min[c], tester[c]);
+                    max[c] = fmax(max[c], tester[c]);
+                }
+            }
+        }
+    }
+
+    bbox = aabb(min, max);
+}
+
+inline bool RotateY::boundingBox(float t0, float t1, aabb& outBox) const
+{
+    outBox = bbox;
+    return hasbox;
+}
+
+
+inline bool RotateY::hit(const ray& r, double t_min, double t_max, hit_record& rec) const
+{
+    auto origin = r.origin();
+    auto direction = r.direction();
+
+    origin[0] = cosTheta * r.origin()[0] - sinTheta * r.origin()[2];
+    origin[2] = sinTheta * r.origin()[0] + cosTheta * r.origin()[2];
+
+    direction[0] = cosTheta * r.direction()[0] - sinTheta * r.direction()[2];
+    direction[2] = sinTheta * r.direction()[0] + cosTheta * r.direction()[2];
+
+    ray rotated_r(origin, direction, r.time());
+
+    if (!ptr->hit(rotated_r, t_min, t_max, rec))
+        return false;
+
+    auto p = rec.p;
+    auto normal = rec.normal;
+
+    p[0] = cosTheta * rec.p[0] + sinTheta * rec.p[2];
+    p[2] = -sinTheta * rec.p[0] + cosTheta * rec.p[2];
+
+    normal[0] = cosTheta * rec.normal[0] + sinTheta * rec.normal[2];
+    normal[2] = -sinTheta * rec.normal[0] + cosTheta * rec.normal[2];
+
+    rec.p = p;
+    rec.set_face_normal(rotated_r, normal);
+
+    return true;
+}
 
 
 // helper functions
